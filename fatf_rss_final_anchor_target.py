@@ -34,12 +34,6 @@ async def main():
             await page.wait_for_selector("div.faceted-search.container", timeout=30000)
 
             selector = "div.cmp-faceted-search__search-bar form button[type='submit']"
-            if await page.locator(selector).count() == 0:
-                print("⚠️ Search button not found.")
-                await context.tracing.stop(path="trace.zip")
-                await browser.close()
-                return
-
             locator = page.locator(selector)
             await locator.scroll_into_view_if_needed()
             await page.wait_for_timeout(1000)
@@ -81,25 +75,22 @@ async def main():
         href = link.get("href", "")
         full_link = "https://www.fatf-gafi.org" + href if href.startswith("/") else href
 
-       pub_date = None
+        pub_date = None
+        if date_elem:
+            raw_date = date_elem.get_text(strip=True)
+            if "Publication date :" in raw_date:
+                clean_date = raw_date.replace("Publication date :", "").strip()
+            else:
+                clean_date = raw_date.strip()
+            try:
+                dt = datetime.strptime(clean_date, "%d %b %Y")
+                pub_date = dt.replace(tzinfo=timezone.utc)
+            except Exception as e:
+                print(f"⚠️ Could not parse date from: '{clean_date}' — {e}")
 
-if date_elem:
-    raw_date = date_elem.get_text(strip=True)
-    if "Publication date :" in raw_date:
-        clean_date = raw_date.replace("Publication date :", "").strip()
-    else:
-        clean_date = raw_date  # just in case format changes slightly
-    try:
-        dt = datetime.strptime(clean_date, "%d %b %Y")
-        pub_date = dt.replace(tzinfo=timezone.utc)
-    except Exception as e:
-        print(f"⚠️ Could not parse date from: '{clean_date}' — {e}")
-
-# Only assign fallback if everything failed above
-if pub_date is None:
-    print("⚠️ Using current time as fallback for pubDate.")
-    pub_date = datetime.now(timezone.utc)
-
+        if pub_date is None:
+            print("⚠️ Using current time as fallback for pubDate.")
+            pub_date = datetime.now(timezone.utc)
 
         entry = fg.add_entry()
         entry.id(full_link)
