@@ -85,10 +85,11 @@ async def main():
         if date_elem:
             raw_date = date_elem.get_text(strip=True)
             try:
-                dt = datetime.strptime(raw_date, "%d %B %Y")
+                clean_date = raw_date.replace("Publication date :", "").strip()
+                dt = datetime.strptime(clean_date, "%d %b %Y")
                 pub_date = dt.replace(tzinfo=timezone.utc)
             except Exception as e:
-                print(f"⚠️ Failed to parse date '{raw_date}': {e}")
+                print(f"⚠️ Could not parse date from: '{clean_date}' — {e}")
 
         entry = fg.add_entry()
         entry.id(full_link)
