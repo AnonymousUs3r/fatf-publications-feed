@@ -9,40 +9,56 @@ async def main():
     url = "https://www.fatf-gafi.org/en/publications.html"
     filename = sys.argv[1] if len(sys.argv) > 1 else "fatf_feed_anchor.xml"
 
-    print("🚀 Launching Playwright...")
+    print("🚀 Launching headless browser...")
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
+        context = await browser.new_context()
+        await context.tracing.start(screenshots=True, snapshots=True)
+
+        page = await context.new_page()
         print(f"🌐 Visiting: {url}")
         await page.goto(url, timeout=60000)
 
+        # 🧼 Try dismissing cookie banner
         try:
+            await page.click("button[title*='Accept']", timeout=5000)
+            print("✅ Cookie banner dismissed")
+        except:
+            print("ℹ️ No cookie prompt appeared")
+
+        try:
+            # Scroll a bit to trigger rendering
+            await page.mouse.wheel(0, 2000)
+            await page.wait_for_timeout(1000)
+
             selector = "div.cmp-faceted-search__search-bar form button[type='submit']"
-            print("🔍 Waiting for correct search button...")
-            await page.wait_for_selector(selector, state="attached", timeout=20000)
+            print("🔍 Waiting for search button...")
+            await page.wait_for_selector(selector, state="attached", timeout=30000)
 
             locator = page.locator(selector)
             await locator.scroll_into_view_if_needed()
             await page.wait_for_timeout(1000)
 
-            print("🖱️ Clicking the search icon...")
+            print("🖱️ Clicking search...")
             await locator.click()
             await page.wait_for_timeout(5000)
 
-            print("⌛ Waiting for real results (h3 > a) to appear...")
-            await page.wait_for_selector("div.cmp-search-results__result__content h3 a", state="attached", timeout=20000)
+            print("⌛ Waiting for result anchors...")
+            await page.wait_for_selector("div.cmp-search-results__result__content h3 a", state="attached", timeout=30000)
 
         except Exception as e:
-            print(f"❌ Encountered an error: {e}")
+            print(f"❌ Error: {e}")
+            await context.tracing.stop(path="trace.zip")
             await browser.close()
             input("⏸ Press Enter to exit...")
             return
 
-        print("✅ Page ready. Extracting HTML...")
+        print("✅ Results loaded. Extracting...")
         content = await page.content()
+        await context.tracing.stop(path="trace.zip")
         await browser.close()
 
-    print("🧪 Parsing results with BeautifulSoup...")
+    print("🧪 Parsing...")
     soup = BeautifulSoup(content, "html.parser")
     anchors = soup.select("div.cmp-search-results__result__content h3 a")
 
@@ -62,7 +78,7 @@ async def main():
             continue
 
         full_link = "https://www.fatf-gafi.org" + href if href.startswith("/") else href
-        pub_date = datetime.now(timezone.utc)  # fallback
+        pub_date = datetime.now(timezone.utc)
 
         parent = a.find_parent("div", class_="cmp-search-results__result__content")
         desc = parent.select_one("span.cmp-search-result__description") if parent else None
