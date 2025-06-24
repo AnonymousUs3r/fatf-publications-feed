@@ -20,17 +20,16 @@ async def main():
         await page.goto(url, timeout=60000)
 
         try:
-            # 🧼 Dismiss cookie banner if it appears
             try:
                 await page.click("button[title*='Accept']", timeout=5000)
                 print("✅ Cookie banner dismissed")
             except:
                 print("ℹ️ No cookie prompt appeared")
 
-            print("🔄 Waiting for publications container...")
+            print("🔄 Waiting for publications container to render...")
             await page.wait_for_selector("div.faceted-search.container", timeout=30000)
 
-            print("🔍 Waiting for search icon...")
+            print("🔍 Waiting for internal search button...")
             selector = "div.cmp-faceted-search__search-bar form button[type='submit']"
             await page.wait_for_selector(selector, state="attached", timeout=30000)
 
@@ -42,17 +41,16 @@ async def main():
             await locator.click()
             await page.wait_for_timeout(5000)
 
-            print("⌛ Waiting for results...")
+            print("⌛ Waiting for anchor-based results...")
             await page.wait_for_selector("div.cmp-search-results__result__content h3 a", state="attached", timeout=30000)
 
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"❌ Error during scraping: {e}")
             await context.tracing.stop(path="trace.zip")
             await browser.close()
-            input("⏸ Press Enter to exit...")
             return
 
-        print("✅ Loaded. Extracting content...")
+        print("✅ Loaded results. Extracting content...")
         content = await page.content()
         await context.tracing.stop(path="trace.zip")
         await browser.close()
@@ -68,7 +66,7 @@ async def main():
     fg.description("Recent reports and updates from the Financial Action Task Force (FATF)")
     fg.language("en")
 
-    print(f"📦 {len(anchors)} entries found")
+    print(f"📦 Found {len(anchors)} entries")
     added = 0
     for a in anchors:
         title = a.get_text(strip=True)
@@ -99,8 +97,7 @@ async def main():
         print(f"  ➕ {title}")
 
     fg.rss_file(filename)
-    print(f"✅ RSS saved as {filename} with {added} entries")
-    input("⏸ Done. Press Enter to close...")
+    print(f"✅ RSS written to {filename} with {added} entries")
 
 if __name__ == "__main__":
     asyncio.run(main())
