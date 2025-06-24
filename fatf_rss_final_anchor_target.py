@@ -81,7 +81,7 @@ async def main():
         href = link.get("href", "")
         full_link = "https://www.fatf-gafi.org" + href if href.startswith("/") else href
 
-        pub_date = datetime.now(timezone.utc)  # fallback
+        pub_date = None
         if date_elem:
             raw_date = date_elem.get_text(strip=True)
             try:
@@ -90,6 +90,9 @@ async def main():
                 pub_date = dt.replace(tzinfo=timezone.utc)
             except Exception as e:
                 print(f"⚠️ Could not parse date from: '{clean_date}' — {e}")
+
+        if not pub_date:
+            pub_date = datetime.now(timezone.utc)
 
         entry = fg.add_entry()
         entry.id(full_link)
