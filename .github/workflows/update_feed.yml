@@ -35,9 +35,3 @@ jobs:
           git add fatf_feed_final.xml
           git commit -m "Update RSS feed" || echo "No changes to commit"
           git push
-
-      - name: 📤 Upload trace.zip (optional)
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-trace
-          path: trace.zip
