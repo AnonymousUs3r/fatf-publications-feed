@@ -19,20 +19,19 @@ async def main():
         print(f"🌐 Visiting: {url}")
         await page.goto(url, timeout=60000)
 
-        # 🧼 Try dismissing cookie banner
         try:
-            await page.click("button[title*='Accept']", timeout=5000)
-            print("✅ Cookie banner dismissed")
-        except:
-            print("ℹ️ No cookie prompt appeared")
+            # 🧼 Dismiss cookie banner if it appears
+            try:
+                await page.click("button[title*='Accept']", timeout=5000)
+                print("✅ Cookie banner dismissed")
+            except:
+                print("ℹ️ No cookie prompt appeared")
 
-        try:
-            # Scroll a bit to trigger rendering
-            await page.mouse.wheel(0, 2000)
-            await page.wait_for_timeout(1000)
+            print("🔄 Waiting for publications container...")
+            await page.wait_for_selector("div.faceted-search.container", timeout=30000)
 
+            print("🔍 Waiting for search icon...")
             selector = "div.cmp-faceted-search__search-bar form button[type='submit']"
-            print("🔍 Waiting for search button...")
             await page.wait_for_selector(selector, state="attached", timeout=30000)
 
             locator = page.locator(selector)
@@ -43,7 +42,7 @@ async def main():
             await locator.click()
             await page.wait_for_timeout(5000)
 
-            print("⌛ Waiting for result anchors...")
+            print("⌛ Waiting for results...")
             await page.wait_for_selector("div.cmp-search-results__result__content h3 a", state="attached", timeout=30000)
 
         except Exception as e:
@@ -53,12 +52,12 @@ async def main():
             input("⏸ Press Enter to exit...")
             return
 
-        print("✅ Results loaded. Extracting...")
+        print("✅ Loaded. Extracting content...")
         content = await page.content()
         await context.tracing.stop(path="trace.zip")
         await browser.close()
 
-    print("🧪 Parsing...")
+    print("🧪 Parsing feed...")
     soup = BeautifulSoup(content, "html.parser")
     anchors = soup.select("div.cmp-search-results__result__content h3 a")
 
@@ -69,7 +68,7 @@ async def main():
     fg.description("Recent reports and updates from the Financial Action Task Force (FATF)")
     fg.language("en")
 
-    print(f"📦 Found {len(anchors)} entries")
+    print(f"📦 {len(anchors)} entries found")
     added = 0
     for a in anchors:
         title = a.get_text(strip=True)
@@ -100,7 +99,7 @@ async def main():
         print(f"  ➕ {title}")
 
     fg.rss_file(filename)
-    print(f"✅ RSS written to {filename} with {added} entries")
+    print(f"✅ RSS saved as {filename} with {added} entries")
     input("⏸ Done. Press Enter to close...")
 
 if __name__ == "__main__":
