@@ -3,7 +3,6 @@ import asyncio
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 from datetime import datetime, timezone
-from email.utils import format_datetime
 from playwright.async_api import async_playwright
 
 async def main():
@@ -76,9 +75,7 @@ async def main():
         href = link.get("href", "")
         full_link = "https://www.fatf-gafi.org" + href if href.startswith("/") else href
 
-        # Initialize pub_date
         pub_date = None
-
         if date_elem:
             raw_date = date_elem.get_text(strip=True)
             clean_date = raw_date.replace("Publication date :", "").strip()
@@ -86,27 +83,24 @@ async def main():
                 dt = datetime.strptime(clean_date, "%d %b %Y")
                 pub_date = dt.replace(tzinfo=timezone.utc)
             except Exception as e:
-                print(f"⚠️ Failed to parse '{clean_date}': {e}")
+                print(f"⚠️ Could not parse date from '{clean_date}': {e}")
 
         if pub_date is None:
             pub_date = datetime.now(timezone.utc)
-            print(f"⚠️ Using fallback date for '{title}': {pub_date.isoformat()}")
+            print(f"⚠️ Using fallback pubDate for '{title}'")
 
-        formatted_date = format_datetime(pub_date)
-        print(f"📆 Writing pubDate for '{title}': {formatted_date}")
+        print(f"📆 pubDate set for '{title}': {pub_date.isoformat()}")
 
         entry = fg.add_entry()
         entry.id(full_link)
         entry.guid(full_link, permalink=True)
         entry.title(title)
         entry.link(href=full_link)
-
-        # Force raw values into XML elements
-        entry._element.pubDate(text=formatted_date)
+        entry.pubDate(pub_date)
         entry.updated(pub_date)
 
     fg.rss_file(filename)
-    print(f"✅ Feed written to {filename}")
+    print(f"✅ RSS feed written to {filename}")
 
 if __name__ == "__main__":
     asyncio.run(main())
