@@ -11,7 +11,7 @@ async def main():
 
     print("🚀 Launching Playwright...")
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         print(f"🌐 Visiting: {url}")
         await page.goto(url, timeout=60000)
