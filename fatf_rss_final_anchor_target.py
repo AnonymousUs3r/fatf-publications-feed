@@ -92,13 +92,14 @@ async def main():
             print("⚠️ Using current time as fallback for pubDate.")
             pub_date = datetime.now(timezone.utc)
 
+        print(f"📆 Writing pubDate for {title}: {pub_date.isoformat()}")
+
         entry = fg.add_entry()
         entry.id(full_link)
         entry.guid(full_link, permalink=True)
         entry.title(title)
         entry.link(href=full_link)
-        entry.pubDate(pub_date)
-        print(f"  ➕ {title} ({pub_date.strftime('%Y-%m-%d')})")
+        entry.pubDate(pub_date.strftime("%a, %d %b %Y %H:%M:%S %z"))
 
     fg.rss_file(filename)
     print(f"✅ Feed written to {filename}")
