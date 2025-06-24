@@ -2,7 +2,7 @@ name: Update FATF RSS Feed
 
 on:
   schedule:
-    - cron: '0 0,12 * * *'  # every 12 hours at 00:00 and 12:00 UTC
+    - cron: '0 0,12 * * *'
   workflow_dispatch:
 
 permissions:
@@ -20,25 +20,24 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 📦 Install Python dependencies
+      - name: 📦 Install dependencies
         run: |
           pip install -r requirements.txt
           playwright install firefox
 
       - name: ⚙️ Run feed script
-        run: python fatf_rss_final_anchor_target.py
+        run: python fatf_rss_final.py
 
-      - name: ✅ Commit updated XML feed
+      - name: ✅ Commit updated feed
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add fatf_feed_anchor.xml
+          git add fatf_feed_final.xml
           git commit -m "Update RSS feed" || echo "No changes to commit"
           git push
 
-      - name: 📤 Upload trace.zip (if it exists)
-        uses: actions/upload-artifact@v4
+      - name: 📤 Upload trace.zip (optional)
+        uses: actions/upload-artifact@v3
         with:
           name: playwright-trace
           path: trace.zip
-          if-no-files-found: ignore
