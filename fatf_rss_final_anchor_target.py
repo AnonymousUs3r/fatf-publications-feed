@@ -79,10 +79,7 @@ async def main():
         pub_date = None
         if date_elem:
             raw_date = date_elem.get_text(strip=True)
-            if "Publication date :" in raw_date:
-                clean_date = raw_date.replace("Publication date :", "").strip()
-            else:
-                clean_date = raw_date.strip()
+            clean_date = raw_date.replace("Publication date :", "").strip()
             try:
                 dt = datetime.strptime(clean_date, "%d %b %Y")
                 pub_date = dt.replace(tzinfo=timezone.utc)
@@ -93,14 +90,18 @@ async def main():
             print("⚠️ Using current time as fallback for pubDate.")
             pub_date = datetime.now(timezone.utc)
 
-        print(f"📆 Writing pubDate for {title}: {pub_date.isoformat()}")
+        rfc2822_date = format_datetime(pub_date)
+        print(f"📆 Writing pubDate for {title}: {rfc2822_date}")
 
         entry = fg.add_entry()
         entry.id(full_link)
         entry.guid(full_link, permalink=True)
         entry.title(title)
         entry.link(href=full_link)
-        entry.pubDate(format_datetime(pub_date))  # 👈 this is the key change
+
+        # Set manually formatted pubDate and Atom fallback
+        entry.pubDate(pub_date)
+        entry.updated(pub_date)
 
     fg.rss_file(filename)
     print(f"✅ Feed written to {filename}")
