@@ -81,18 +81,25 @@ async def main():
         href = link.get("href", "")
         full_link = "https://www.fatf-gafi.org" + href if href.startswith("/") else href
 
-        pub_date = None
-        if date_elem:
-            raw_date = date_elem.get_text(strip=True)
-            try:
-                clean_date = raw_date.replace("Publication date :", "").strip()
-                dt = datetime.strptime(clean_date, "%d %b %Y")
-                pub_date = dt.replace(tzinfo=timezone.utc)
-            except Exception as e:
-                print(f"⚠️ Could not parse date from: '{clean_date}' — {e}")
+       pub_date = None
 
-        if not pub_date:
-            pub_date = datetime.now(timezone.utc)
+if date_elem:
+    raw_date = date_elem.get_text(strip=True)
+    if "Publication date :" in raw_date:
+        clean_date = raw_date.replace("Publication date :", "").strip()
+    else:
+        clean_date = raw_date  # just in case format changes slightly
+    try:
+        dt = datetime.strptime(clean_date, "%d %b %Y")
+        pub_date = dt.replace(tzinfo=timezone.utc)
+    except Exception as e:
+        print(f"⚠️ Could not parse date from: '{clean_date}' — {e}")
+
+# Only assign fallback if everything failed above
+if pub_date is None:
+    print("⚠️ Using current time as fallback for pubDate.")
+    pub_date = datetime.now(timezone.utc)
+
 
         entry = fg.add_entry()
         entry.id(full_link)
