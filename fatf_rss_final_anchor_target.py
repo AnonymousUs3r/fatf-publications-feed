@@ -76,7 +76,9 @@ async def main():
         href = link.get("href", "")
         full_link = "https://www.fatf-gafi.org" + href if href.startswith("/") else href
 
+        # Initialize pub_date
         pub_date = None
+
         if date_elem:
             raw_date = date_elem.get_text(strip=True)
             clean_date = raw_date.replace("Publication date :", "").strip()
@@ -84,14 +86,14 @@ async def main():
                 dt = datetime.strptime(clean_date, "%d %b %Y")
                 pub_date = dt.replace(tzinfo=timezone.utc)
             except Exception as e:
-                print(f"⚠️ Could not parse date from: '{clean_date}' — {e}")
+                print(f"⚠️ Failed to parse '{clean_date}': {e}")
 
         if pub_date is None:
-            print("⚠️ Using current time as fallback for pubDate.")
             pub_date = datetime.now(timezone.utc)
+            print(f"⚠️ Using fallback date for '{title}': {pub_date.isoformat()}")
 
-        rfc2822_date = format_datetime(pub_date)
-        print(f"📆 Writing pubDate for {title}: {rfc2822_date}")
+        formatted_date = format_datetime(pub_date)
+        print(f"📆 Writing pubDate for '{title}': {formatted_date}")
 
         entry = fg.add_entry()
         entry.id(full_link)
@@ -99,8 +101,8 @@ async def main():
         entry.title(title)
         entry.link(href=full_link)
 
-        # Set manually formatted pubDate and Atom fallback
-        entry.pubDate(pub_date)
+        # Force raw values into XML elements
+        entry._element.pubDate(text=formatted_date)
         entry.updated(pub_date)
 
     fg.rss_file(filename)
