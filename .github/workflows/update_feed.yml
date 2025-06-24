@@ -41,4 +41,4 @@ jobs:
         with:
           name: playwright-trace
           path: trace.zip
-        if-no-files-found: ignore
+          if-no-files-found: ignore
