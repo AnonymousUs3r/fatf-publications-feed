@@ -38,7 +38,7 @@ jobs:
           git push
 
       - name: 📦 Upload trace.zip (if it exists)
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-trace
           path: trace.zip
