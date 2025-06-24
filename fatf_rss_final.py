@@ -1,6 +1,7 @@
 import sys
 import asyncio
 import re
+import hashlib
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 from datetime import datetime, timezone
@@ -8,7 +9,7 @@ from playwright.async_api import async_playwright
 
 async def main():
     url = "https://www.fatf-gafi.org/en/publications.html"
-    filename = sys.argv[1] if len(sys.argv) > 1 else "fatf_feed_anchor.xml"
+    filename = sys.argv[1] if len(sys.argv) > 1 else "fatf_feed_final.xml"
 
     print("🚀 Launching headless Firefox browser...")
     async with async_playwright() as p:
@@ -82,7 +83,6 @@ async def main():
             cleaned = re.sub(r"(?i)publication date\s*[:–—]?\s*", "", raw_date).strip()
             try:
                 dt = datetime.strptime(cleaned, "%d %b %Y")
-                # ⏰ Set to 23:59 UTC for bulletproof cross-timezone consistency
                 pub_date = datetime(dt.year, dt.month, dt.day, 23, 59, 0, tzinfo=timezone.utc)
             except Exception as e:
                 print(f"⚠️ Could not parse '{cleaned}': {e}")
@@ -93,9 +93,12 @@ async def main():
 
         print(f"📆 pubDate for '{title}': {pub_date.isoformat()}")
 
+        # Stable GUID: hash of title + link
+        stable_id = hashlib.md5((title + full_link).encode("utf-8")).hexdigest()
+
         entry = fg.add_entry()
-        entry.id(full_link)
-        entry.guid(full_link, permalink=True)
+        entry.id(stable_id)
+        entry.guid(stable_id, permalink=False)
         entry.title(title)
         entry.link(href=full_link)
         entry.pubDate(pub_date)
