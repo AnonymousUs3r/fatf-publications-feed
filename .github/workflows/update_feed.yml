@@ -1,0 +1,38 @@
+name: Update FATF RSS Feed
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"  # every 12 hours UTC
+  workflow_dispatch:       # allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # allow pushing changes
+
+    steps:
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install beautifulsoup4 feedgen playwright
+          playwright install chromium
+
+      - name: ⚙️ Run feed script
+        run: python fatf_rss_final_anchor_target.py
+
+      - name: 📤 Commit updated feed
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          git add fatf_feed_anchor.xml
+          git commit -m "🔄 Update FATF RSS feed" || echo "No changes to commit"
+          git push
