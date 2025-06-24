@@ -3,6 +3,7 @@ import asyncio
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 from datetime import datetime, timezone
+from email.utils import format_datetime
 from playwright.async_api import async_playwright
 
 async def main():
@@ -99,7 +100,7 @@ async def main():
         entry.guid(full_link, permalink=True)
         entry.title(title)
         entry.link(href=full_link)
-        entry.pubDate(pub_date.strftime("%a, %d %b %Y %H:%M:%S %z"))
+        entry.pubDate(format_datetime(pub_date))  # 👈 this is the key change
 
     fg.rss_file(filename)
     print(f"✅ Feed written to {filename}")
