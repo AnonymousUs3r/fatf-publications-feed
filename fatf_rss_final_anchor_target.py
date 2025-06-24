@@ -1,5 +1,6 @@
 import sys
 import asyncio
+import re
 from bs4 import BeautifulSoup
 from feedgen.feed import FeedGenerator
 from datetime import datetime, timezone
@@ -78,18 +79,18 @@ async def main():
         pub_date = None
         if date_elem:
             raw_date = date_elem.get_text(strip=True)
-            clean_date = raw_date.replace("Publication date :", "").strip()
+            cleaned = re.sub(r"(?i)publication date\s*[:–—]?\s*", "", raw_date).strip()
             try:
-                dt = datetime.strptime(clean_date, "%d %b %Y")
+                dt = datetime.strptime(cleaned, "%d %b %Y")
                 pub_date = dt.replace(tzinfo=timezone.utc)
             except Exception as e:
-                print(f"⚠️ Could not parse date from '{clean_date}': {e}")
+                print(f"⚠️ Could not parse '{cleaned}': {e}")
 
         if pub_date is None:
             pub_date = datetime.now(timezone.utc)
-            print(f"⚠️ Using fallback pubDate for '{title}'")
+            print(f"⚠️ Fallback pubDate used for: {title}")
 
-        print(f"📆 pubDate set for '{title}': {pub_date.isoformat()}")
+        print(f"📆 pubDate for '{title}': {pub_date.isoformat()}")
 
         entry = fg.add_entry()
         entry.id(full_link)
