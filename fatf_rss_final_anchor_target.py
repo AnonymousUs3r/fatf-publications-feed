@@ -35,7 +35,7 @@ async def main():
 
             selector = "div.cmp-faceted-search__search-bar form button[type='submit']"
             if await page.locator(selector).count() == 0:
-                print("⚠️ Search button not found. Rendering may still be incomplete.")
+                print("⚠️ Search button not found.")
                 await context.tracing.stop(path="trace.zip")
                 await browser.close()
                 return
@@ -61,7 +61,7 @@ async def main():
 
     print("🧪 Parsing feed items...")
     soup = BeautifulSoup(content, "html.parser")
-    anchors = soup.select("div.cmp-search-results__result__content h3 a")
+    items = soup.select("ul.cmp-search-results__list > li")
 
     fg = FeedGenerator()
     fg.id(url)
@@ -70,24 +70,25 @@ async def main():
     fg.description("Recent reports and updates from the Financial Action Task Force (FATF)")
     fg.language("en")
 
-    for a in anchors:
-        title = a.get_text(strip=True)
-        href = a.get("href", "")
-        if not title or not href:
+    for item in items:
+        link = item.select_one("div.cmp-search-results__result__content h3 a")
+        date_elem = item.select_one("p.cmp-search-results__result__date")
+
+        if not link:
             continue
 
+        title = link.get_text(strip=True)
+        href = link.get("href", "")
         full_link = "https://www.fatf-gafi.org" + href if href.startswith("/") else href
-        pub_date = datetime.now(timezone.utc)  # Fallback if date parsing fails
 
-        parent = a.find_parent("div", class_="cmp-search-results__result__content")
-        desc = parent.select_one("span.cmp-search-result__description") if parent else None
-        if desc:
-            date_text = desc.get_text(strip=True).split(" - ")[0]
+        pub_date = datetime.now(timezone.utc)  # fallback
+        if date_elem:
+            raw_date = date_elem.get_text(strip=True)
             try:
-                dt = datetime.strptime(date_text, "%B %d, %Y")
+                dt = datetime.strptime(raw_date, "%d %B %Y")
                 pub_date = dt.replace(tzinfo=timezone.utc)
             except Exception as e:
-                print(f"⚠️ Could not parse date from: '{date_text}' — {e}")
+                print(f"⚠️ Failed to parse date '{raw_date}': {e}")
 
         entry = fg.add_entry()
         entry.id(full_link)
