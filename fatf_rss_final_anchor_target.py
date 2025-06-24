@@ -82,8 +82,8 @@ async def main():
             cleaned = re.sub(r"(?i)publication date\s*[:–—]?\s*", "", raw_date).strip()
             try:
                 dt = datetime.strptime(cleaned, "%d %b %Y")
-                # ✅ Set time to 12:00 noon UTC to avoid timezone drift
-                pub_date = datetime(dt.year, dt.month, dt.day, 12, 0, 0, tzinfo=timezone.utc)
+                # ⏰ Set to 23:59 UTC for bulletproof cross-timezone consistency
+                pub_date = datetime(dt.year, dt.month, dt.day, 23, 59, 0, tzinfo=timezone.utc)
             except Exception as e:
                 print(f"⚠️ Could not parse '{cleaned}': {e}")
 
