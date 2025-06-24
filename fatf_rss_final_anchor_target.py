@@ -18,7 +18,7 @@ async def main():
         page = await context.new_page()
         print(f"🌐 Visiting: {url}")
         await page.goto(url, timeout=60000)
-
+        
         try:
             try:
                 await page.click("button[title*='Accept']", timeout=5000)
@@ -26,23 +26,32 @@ async def main():
             except:
                 print("ℹ️ No cookie prompt appeared")
 
-            print("🔄 Waiting for publications container to render...")
-            await page.wait_for_selector("div.faceted-search.container", timeout=30000)
+            print("⏳ Waiting for scripts to settle...")
+            await page.wait_for_load_state('networkidle')
+            await page.wait_for_timeout(5000)  # Let JS hydrate
 
-            print("🔍 Waiting for internal search button...")
-            selector = "div.cmp-faceted-search__search-bar form button[type='submit']"
-            await page.wait_for_selector(selector, state="attached", timeout=30000)
+            container = "div.faceted-search.container"
+            print(f"🔎 Waiting for container: {container}")
+            await page.wait_for_selector(container, timeout=30000)
 
-            locator = page.locator(selector)
+            search_button = "div.cmp-faceted-search__search-bar form button[type='submit']"
+            print(f"🔍 Checking for search button: {search_button}")
+            button_count = await page.locator(search_button).count()
+            if button_count == 0:
+                print("⚠️ Search button not found — page may not be rendering interactively in CI.")
+                await context.tracing.stop(path="trace.zip")
+                await browser.close()
+                return
+
+            locator = page.locator(search_button)
             await locator.scroll_into_view_if_needed()
             await page.wait_for_timeout(1000)
-
-            print("🖱️ Clicking search...")
             await locator.click()
             await page.wait_for_timeout(5000)
 
-            print("⌛ Waiting for anchor-based results...")
-            await page.wait_for_selector("div.cmp-search-results__result__content h3 a", state="attached", timeout=30000)
+            results_selector = "div.cmp-search-results__result__content h3 a"
+            print(f"📄 Waiting for results: {results_selector}")
+            await page.wait_for_selector(results_selector, timeout=30000)
 
         except Exception as e:
             print(f"❌ Error during scraping: {e}")
@@ -50,12 +59,12 @@ async def main():
             await browser.close()
             return
 
-        print("✅ Loaded results. Extracting content...")
+        print("✅ Results loaded. Parsing content...")
         content = await page.content()
         await context.tracing.stop(path="trace.zip")
         await browser.close()
 
-    print("🧪 Parsing feed...")
+    print("🧪 Parsing feed entries...")
     soup = BeautifulSoup(content, "html.parser")
     anchors = soup.select("div.cmp-search-results__result__content h3 a")
 
@@ -67,7 +76,6 @@ async def main():
     fg.language("en")
 
     print(f"📦 Found {len(anchors)} entries")
-    added = 0
     for a in anchors:
         title = a.get_text(strip=True)
         href = a.get("href", "")
@@ -93,11 +101,10 @@ async def main():
         entry.title(title)
         entry.link(href=full_link)
         entry.pubDate(pub_date)
-        added += 1
         print(f"  ➕ {title}")
 
     fg.rss_file(filename)
-    print(f"✅ RSS written to {filename} with {added} entries")
+    print(f"✅ RSS written to {filename}")
 
 if __name__ == "__main__":
     asyncio.run(main())
