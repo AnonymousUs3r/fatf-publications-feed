@@ -11,7 +11,7 @@ async def main():
 
     print("🚀 Launching headless Firefox browser...")
     async with async_playwright() as p:
-        browser = await p.firefox.launch(headless=True)  # <-- switched to Firefox here
+        browser = await p.firefox.launch(headless=True)
         context = await browser.new_context()
         await context.tracing.start(screenshots=True, snapshots=True)
 
@@ -77,17 +77,17 @@ async def main():
             continue
 
         full_link = "https://www.fatf-gafi.org" + href if href.startswith("/") else href
-        pub_date = datetime.now(timezone.utc)
+        pub_date = datetime.now(timezone.utc)  # Fallback if date parsing fails
 
         parent = a.find_parent("div", class_="cmp-search-results__result__content")
         desc = parent.select_one("span.cmp-search-result__description") if parent else None
         if desc:
+            date_text = desc.get_text(strip=True).split(" - ")[0]
             try:
-                date_text = desc.get_text(strip=True)[:7]
-                dt = datetime.strptime(date_text, "%B %Y")
-                pub_date = dt.replace(day=1, tzinfo=timezone.utc)
-            except:
-                pass
+                dt = datetime.strptime(date_text, "%B %d, %Y")
+                pub_date = dt.replace(tzinfo=timezone.utc)
+            except Exception as e:
+                print(f"⚠️ Could not parse date from: '{date_text}' — {e}")
 
         entry = fg.add_entry()
         entry.id(full_link)
@@ -95,7 +95,7 @@ async def main():
         entry.title(title)
         entry.link(href=full_link)
         entry.pubDate(pub_date)
-        print(f"  ➕ {title}")
+        print(f"  ➕ {title} ({pub_date.strftime('%Y-%m-%d')})")
 
     fg.rss_file(filename)
     print(f"✅ Feed written to {filename}")
