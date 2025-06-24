@@ -25,6 +25,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install beautifulsoup4 feedgen playwright
           playwright install chromium
+          npx playwright install --with-deps
 
       - name: ⚙️ Run feed script
         run: python fatf_rss_final_anchor_target.py
